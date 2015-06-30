@@ -1,10 +1,10 @@
 package snmp
 
 import (
-	"encoding/asn1"
 	"fmt"
 	"io"
 
+	"github.com/mjibson/snmp/asn1"
 	"github.com/mjibson/snmp/mib"
 )
 

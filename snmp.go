@@ -2,11 +2,12 @@
 package snmp
 
 import (
-	"encoding/asn1"
 	"fmt"
 	"math/rand"
 	"net"
 	"time"
+
+	"github.com/mjibson/snmp/asn1"
 )
 
 // reserved binding values.
@@ -148,7 +149,7 @@ type SNMP struct {
 	// Community is the SNMP community.
 	Community string
 	// Addr is the UDP address of the SNMP host.
-	Addr      *net.UDPAddr
+	Addr *net.UDPAddr
 }
 
 // New creates a new SNMP which connects to host with specified community.
