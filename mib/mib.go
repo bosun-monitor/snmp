@@ -3,12 +3,13 @@ package mib
 
 import (
 	"bytes"
-	"encoding/asn1"
 	"fmt"
 	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/mjibson/snmp/asn1"
 )
 
 var mibDir = ""
