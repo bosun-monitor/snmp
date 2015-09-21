@@ -55,6 +55,9 @@ func (s *SNMP) Walk(oids ...string) (*Rows, error) {
 		head:     lookup(oids...),
 		request:  s.do,
 	}
+	if s.Version == V1 {
+		rows.walkFn = walk1
+	}
 	for _, oid := range rows.head {
 		rows.last.bindings = append(rows.last.bindings, binding{Name: oid})
 	}
