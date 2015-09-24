@@ -127,6 +127,14 @@ func (a binding) less(b binding) bool {
 	panic("unreached")
 }
 
+type SnmpVersion int
+
+// Version 1 and 2c
+const (
+	V1  SnmpVersion = 0x0
+	V2c SnmpVersion = 0x1
+)
+
 // request represents an SNMP request to be sent over a Transport.
 type request struct {
 	ID             int32
@@ -149,11 +157,14 @@ type SNMP struct {
 	// Community is the SNMP community.
 	Community string
 	// Addr is the UDP address of the SNMP host.
-	Addr *net.UDPAddr
+	Addr    *net.UDPAddr
+	Version SnmpVersion
 }
 
 // New creates a new SNMP which connects to host with specified community.
-func New(host, community string) (*SNMP, error) {
+// host, err := snmp.New("localhost", "public")
+// host, err := snmp.New("localhost", "public", snmp.Version(snmp.V1))
+func New(host, community string, options ...func(*SNMP) error) (*SNMP, error) {
 	hostport := host
 	if _, _, err := net.SplitHostPort(hostport); err != nil {
 		hostport = host + ":161"
@@ -162,10 +173,45 @@ func New(host, community string) (*SNMP, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &SNMP{
+	t := SNMP{
 		Community: community,
 		Addr:      addr,
-	}, nil
+		Version:   V2c, // default
+	}
+	return &t, t.SetOption(options...)
+}
+
+// SetOption takes one or more option functions and applies them in order to
+// itself.
+func (s *SNMP) SetOption(options ...func(*SNMP) error) error {
+	for _, f := range options {
+		if err := f(s); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// the SetOption function to pass to the New().
+func Version(version SnmpVersion) func(*SNMP) error {
+	return func(s *SNMP) error {
+		return s.setVersion(version)
+	}
+}
+
+// SetVersion sets the SNMP version
+func (s *SNMP) SetVersion(version SnmpVersion) error {
+	return s.SetOption(Version(version))
+}
+
+func (s *SNMP) setVersion(version SnmpVersion) error {
+	switch version {
+	case V1, V2c:
+		s.Version = version
+	default:
+		return fmt.Errorf("Only snmp v1 and v2c are supported")
+	}
+	return nil
 }
 
 func (s *SNMP) do(req *request) (*response, error) {
@@ -186,7 +232,7 @@ func (s *SNMP) do(req *request) (*response, error) {
 				Bindings    []binding
 			} `asn1:"application,tag:0"`
 		}
-		p.Version = 1
+		p.Version = int(s.Version)
 		p.Community = []byte(s.Community)
 		p.Data.RequestID = req.ID
 		p.Data.Bindings = req.Bindings
@@ -202,7 +248,7 @@ func (s *SNMP) do(req *request) (*response, error) {
 				Bindings    []binding
 			} `asn1:"application,tag:1"`
 		}
-		p.Version = 1
+		p.Version = int(s.Version)
 		p.Community = []byte(s.Community)
 		p.Data.RequestID = req.ID
 		p.Data.Bindings = req.Bindings
@@ -218,7 +264,7 @@ func (s *SNMP) do(req *request) (*response, error) {
 				Bindings       []binding
 			} `asn1:"application,tag:5"`
 		}
-		p.Version = 1
+		p.Version = int(s.Version)
 		p.Community = []byte(s.Community)
 		p.Data.RequestID = req.ID
 		p.Data.NonRepeaters = 0
